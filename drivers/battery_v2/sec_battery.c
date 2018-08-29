@@ -3318,14 +3318,11 @@ static void sec_bat_misc_event_work(struct work_struct *work)
 				struct sec_battery_info, misc_event_work.work);
 	int xor_misc_event = battery->prev_misc_event ^ battery->misc_event;
 
-	if ((xor_misc_event & (BATT_MISC_EVENT_UNDEFINED_RANGE_TYPE |
-		BATT_MISC_EVENT_HICCUP_TYPE)) &&
+	if ((xor_misc_event & BATT_MISC_EVENT_UNDEFINED_RANGE_TYPE) &&
 		(battery->cable_type == SEC_BATTERY_CABLE_NONE)) {
-		if (battery->misc_event & (BATT_MISC_EVENT_UNDEFINED_RANGE_TYPE |
-			BATT_MISC_EVENT_HICCUP_TYPE)) {
+		if (battery->misc_event & BATT_MISC_EVENT_UNDEFINED_RANGE_TYPE) {
 			sec_bat_set_charge(battery, SEC_BAT_CHG_MODE_BUCK_OFF);
-		} else if (battery->prev_misc_event & (BATT_MISC_EVENT_UNDEFINED_RANGE_TYPE |
-			BATT_MISC_EVENT_HICCUP_TYPE)) {
+		} else if (battery->prev_misc_event & BATT_MISC_EVENT_UNDEFINED_RANGE_TYPE) {
 			sec_bat_set_charge(battery, SEC_BAT_CHG_MODE_CHARGING_OFF);
 		}
 	}
@@ -3599,8 +3596,7 @@ skip_current_monitor:
 			 __func__, battery->capacity, battery->status, battery->store_mode);
 
 		if (battery->capacity >= battery->pdata->store_mode_max) {
-			int chg_mode = battery->misc_event &
-				(BATT_MISC_EVENT_UNDEFINED_RANGE_TYPE | BATT_MISC_EVENT_HICCUP_TYPE) ?
+			int chg_mode = battery->misc_event & BATT_MISC_EVENT_UNDEFINED_RANGE_TYPE ?
 				SEC_BAT_CHG_MODE_BUCK_OFF : SEC_BAT_CHG_MODE_CHARGING_OFF;
 			/* to discharge the battery, off buck */
 			if (battery->capacity > battery->pdata->store_mode_max)
@@ -5819,15 +5815,6 @@ ssize_t sec_bat_store_attrs(
 		break;
 #endif
 	case BATT_MISC_EVENT:
-		if (sscanf(buf, "%10d\n", &x) == 1) {
-			pr_info("%s: PMS sevice hiccup read done : %d ", __func__, x);
-			if (!battery->hiccup_status &&
-				(battery->misc_event & BATT_MISC_EVENT_HICCUP_TYPE)) {
-				sec_bat_set_misc_event(battery,
-					BATT_MISC_EVENT_HICCUP_TYPE, 1);
-			}
-		}
-		ret = count;
 		break;
 	case BATT_EXT_DEV_CHG:
 		if (sscanf(buf, "%10d\n", &x) == 1) {
@@ -6723,9 +6710,6 @@ static int sec_bat_cable_check(struct sec_battery_info *battery,
 		battery->cisd.data[CISD_WATER_DETECT]++;
 #endif
 		break;
-	case ATTACHED_DEV_HICCUP_MUIC:
-		current_cable_type = SEC_BATTERY_CABLE_NONE;
-		break;
 	case ATTACHED_DEV_OTG_MUIC:
 	case ATTACHED_DEV_JIG_UART_OFF_VB_OTG_MUIC:
 	case ATTACHED_DEV_HMT_MUIC:
@@ -7143,16 +7127,6 @@ skip_cable_check:
 	sec_bat_set_misc_event(battery, BATT_MISC_EVENT_UNDEFINED_RANGE_TYPE,
 		(battery->muic_cable_type != ATTACHED_DEV_UNDEFINED_CHARGING_MUIC) &&
 		(battery->muic_cable_type != ATTACHED_DEV_UNDEFINED_RANGE_MUIC));
-	if (battery->muic_cable_type == ATTACHED_DEV_HICCUP_MUIC) {
-		sec_bat_set_misc_event(battery, BATT_MISC_EVENT_HICCUP_TYPE, 0);
-		battery->hiccup_status = 1;
-	} else {
-		battery->hiccup_status = 0;
-		if (battery->misc_event & BATT_MISC_EVENT_HICCUP_TYPE) {
-			wake_lock(&battery->monitor_wake_lock);
-			queue_delayed_work(battery->monitor_wqueue, &battery->monitor_work, 0);
-		}
-	}
 
 	/* showing charging icon and noti(no sound, vi, haptic) only
 	   if slow insertion is detected by MUIC */
@@ -7321,16 +7295,6 @@ static int batt_handle_notification(struct notifier_block *nb,
 		(battery->muic_cable_type != ATTACHED_DEV_JIG_USB_ON_MUIC) &&
 #endif
 		(battery->muic_cable_type != ATTACHED_DEV_UNDEFINED_RANGE_MUIC));
-	if (battery->muic_cable_type == ATTACHED_DEV_HICCUP_MUIC) {
-		sec_bat_set_misc_event(battery, BATT_MISC_EVENT_HICCUP_TYPE, 0);
-		battery->hiccup_status = 1;
-	} else {
-		battery->hiccup_status = 0;
-		if (battery->misc_event & BATT_MISC_EVENT_HICCUP_TYPE) {
-			wake_lock(&battery->monitor_wake_lock);
-			queue_delayed_work(battery->monitor_wqueue, &battery->monitor_work, 0);
-		}
-	}
 
 #if defined(CONFIG_CCIC_NOTIFIER)
 	/* If PD cable is already attached, return this function */
@@ -8930,7 +8894,6 @@ static int sec_battery_probe(struct platform_device *pdev)
 	battery->cooldown_mode = true;
 #endif
 	battery->skip_swelling = false;
-	battery->hiccup_status = 0;
 	sec_bat_set_current_event(battery, SEC_BAT_CURRENT_EVENT_USB_100MA, SEC_BAT_CURRENT_EVENT_USB_100MA);
 
 	if (lpcharge) {

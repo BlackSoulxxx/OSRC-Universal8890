@@ -31,6 +31,7 @@
 #include <linux/string.h>
 
 #include <linux/muic/muic.h>
+#include <linux/sec_batt.h>
 
 #if defined(CONFIG_MUIC_NOTIFIER)
 #include <linux/muic/muic_notifier.h>
@@ -163,6 +164,14 @@ int regmap_com_to(struct regmap_desc *pdesc, int port)
 {
 	struct regmap_ops *pops = pdesc->regmapops;
 	int uattr, ret;
+#if defined(CONFIG_HICCUP_CHARGER) && defined(CONFIG_MUIC_SUPPORT_CCIC)
+	muic_data_t *pmuic = pdesc->muic;
+
+	if (!lpcharge && pmuic->afc_water_disable && pmuic->vps.t.vbvolt > 0) {
+		pr_info("%s HICCUP MODE\n", __func__);
+		port = COM_USB_CP;
+	}
+#endif
 
 	pops->ioctl(pdesc, GET_COM_VAL, &port, &uattr);
 #if defined(CONFIG_MUIC_UNIVERSAL_MAX77849)

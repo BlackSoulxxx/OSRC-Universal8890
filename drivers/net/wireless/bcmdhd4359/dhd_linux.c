@@ -10344,11 +10344,7 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 	uint32 frameburst = CUSTOM_FRAMEBURST_SET;
 	uint wnm_bsstrans_resp = 0;
 #ifdef SUPPORT_SET_CAC
-#ifdef SUPPORT_CUSTOM_SET_CAC
-	uint32 cac = 0;
-#else
 	uint32 cac = 1;
-#endif /* SUPPORT_CUSTOM_SET_CAC */
 #endif /* SUPPORT_SET_CAC */
 
 #if defined(DHD_NON_DMA_M2M_CORRUPTION)

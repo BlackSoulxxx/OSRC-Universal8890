@@ -105,7 +105,6 @@
 #define BATT_MISC_EVENT_UNDEFINED_RANGE_TYPE	0x00000001
 #define BATT_MISC_EVENT_WIRELESS_BACKPACK_TYPE	0x00000002
 #define BATT_MISC_EVENT_TIMEOUT_OPEN_TYPE		0x00000004
-#define BATT_MISC_EVENT_HICCUP_TYPE		0x00000020
 
 #define SEC_INPUT_VOLTAGE_0V	0
 #define SEC_INPUT_VOLTAGE_5V	5
@@ -410,8 +409,6 @@ struct sec_battery_info {
 	struct mutex batt_handlelock;
 	struct mutex current_eventlock;
 	struct mutex typec_notylock;
-
-	unsigned int hiccup_status;
 
 	bool stop_timer;
 	unsigned long prev_safety_time;

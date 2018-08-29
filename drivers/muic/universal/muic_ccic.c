@@ -174,10 +174,6 @@ static bool mdev_is_supported(int mdev)
 
 static int mdev_com_to(muic_data_t *pmuic, int path)
 {
-#if defined(CONFIG_HICCUP_CHARGER)
-	if (pmuic->afc_water_disable)
-		return 0;
-#endif
 #if defined(CONFIG_MUIC_HV)
 	hv_clear_hvcontrol(pmuic->phv);
 #endif
@@ -300,23 +296,6 @@ int mdev_continue_for_TA_USB(muic_data_t *pmuic, int mdev)
 					__func__, MUIC_DEV_NAME);
 			mdev_com_to(pmuic, MUIC_PATH_USB_AP);
 		}
-#if defined(CONFIG_HICCUP_CHARGER)
-		if (pmuic->afc_water_disable) {
-			pr_info("%s:%s:HICCUP MODE. set path to Aux USB\n",
-					__func__, MUIC_DEV_NAME);
-			com_to_usb_cp(pmuic);
-
-			if (vbus) {
-				if (pmuic->legacy_dev != ATTACHED_DEV_TA_MUIC)
-					mdev_noti_detached(pmuic->legacy_dev);
-
-				pmuic->legacy_dev = ATTACHED_DEV_TA_MUIC;
-				mdev_noti_attached(pmuic->legacy_dev);
-			}
-
-			return 0;
-		}
-#endif
 		if (pdesc->ccic_evt_rid == 0) {
 			pr_info("%s:%s: No rid\n", __func__, MUIC_DEV_NAME);
 			return 0;
@@ -553,9 +532,6 @@ static int muic_handle_ccic_ATTACH(muic_data_t *pmuic, CC_NOTI_ATTACH_TYPEDEF *p
 
 		/* CCIC ATTACH means NO WATER */
 		if (pmuic->afc_water_disable) {
-#if defined(CONFIG_HICCUP_CHARGER)
-			enable_chgdet(pmuic, 1);
-#endif
 			pr_info("%s: Water is not detected, AFC Enable\n", __func__);
 			pmuic->afc_water_disable = false;
 		}
@@ -720,7 +696,6 @@ static int muic_handle_ccic_WATER(muic_data_t *pmuic, CC_NOTI_ATTACH_TYPEDEF *pn
 		pr_info("%s: Water detect\n", __func__);
 #if defined(CONFIG_HICCUP_CHARGER)
 		/* set path open initially at WATER state */
-		enable_chgdet(pmuic, 0);
 		mdev_com_to(pmuic, MUIC_PATH_OPEN);
 #endif
 		pmuic->afc_water_disable = true;
